@@ -118,7 +118,7 @@ static void printHelpMes() {
     std::cout << "\n------- Usage ---------\n";
     std::cout << "HotkeyListener.exe -hotkey HOT_KEY_COMBINATION -program PATH_OF_PROGRAM\n";
     std::cout << "Example: HotkeyListener.exe -hotkey SHIFT+CONTROL+T -program C:\\log.cmd\n";
-    std::cout << "Press CONTROL+C to terminate the program.";
+    std::cout << "Press CONTROL+C to terminate the program.\n";
     std::cout << "-----------------------\n\n";
     std::cout << "Supported KEY modifiers are: \n";
     for (auto pair : HOTKEY_MODS) {
