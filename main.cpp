@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <tdh.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 
@@ -116,9 +117,9 @@ static std::unordered_map<std::string, UINT  > const HOTKEY_KEYS ({
 
 static void printHelpMes() {
     std::cout << "\n------- Usage ---------\n";
-    std::cout << "HotkeyListener.exe -hotkey HOT_KEY_COMBINATION -program PATH_OF_PROGRAM\n";
-    std::cout << "Example: HotkeyListener.exe -hotkey SHIFT+CONTROL+T -program C:\\log.cmd\n";
-    std::cout << "Press CONTROL+C to terminate the program.\n";
+    std::cout << "HotkeyListener.exe -hotkey HOT_KEY_COMBINATION -program PATH_OF_LOG.CMD -arg log.cmd_aruguments \n";
+    std::cout << "   (-arg is optional)\n";
+    std::cout << "Example: HotkeyListener.exe -hotkey CONTROL+P -program \"C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\gpuview\\log.cmd\" -arg \"normal light\"\n";
     std::cout << "-----------------------\n\n";
     std::cout << "Supported KEY modifiers are: \n";
     for (auto pair : HOTKEY_MODS) {
@@ -133,10 +134,58 @@ static void printHelpMes() {
 
 } 
 
+// create a cmd file LogSwitch.cmd, which controls the start and stop of log.cmd
+// this cmd will run when this program starts, and monitors two txt files created by this program
+// to control the log start & stop.
+static void createLogSwitchCMD(char * logCmdPath, char * arg) {
+    //remove if exit
+    remove("LogSwitch.cmd");
+
+    // create cmd content
+    std::string cmdContent =
+        "set LogCmdPath=\"" + std::string(logCmdPath) + "\"\n" +
+        "del log_start.txt\n"
+        "del log_stop.txt\n"
+        "goto :checkForStart\n"
+        "\n"
+        ":checkForStart\n"
+        "timeout /t 1 /nobreak\n"
+        "if exist log_start.txt (\n"
+        "	call %LogCmdPath% " + std::string(arg) + "\n" +
+        "	goto :waitToStop\n"
+        ")\n"
+        "else (\n"
+        "	goto :checkForStart \n"
+        ")\n"
+        "\n"
+        ":waitToStop\n"
+        "timeout /t 1 /nobreak\n"
+        "if exist log_stop.txt (\n"
+        "	call %LogCmdPath% " + std::string(arg) + "\n" +
+        "	goto :end\n"
+        ")\n"
+        "else (\n"
+        "	goto :waitToStop\n"
+        ")\n"
+        "\n"
+        ":end\n"
+        "del log_start.txt\n"
+        "del log_stop.txt\n"
+        "del LogSwitch.cmd\n";
+
+    // write file
+    std::ofstream LogSwitchCMD;
+    LogSwitchCMD.open("LogSwitch.cmd");
+    LogSwitchCMD << cmdContent;
+    LogSwitchCMD.close();
+}
+
+
 int main(int argc, char** argv) {
 
     char* hotkey = NULL;
     char* program = NULL;
+    char* arg = NULL;
 
     // parse arg
     for (int i = 1; i < argc; ++i) {
@@ -150,10 +199,18 @@ int main(int argc, char** argv) {
         if (strcmp(argv[i], "-program") == 0) {
             program = argv[++i];
         }
+        if (strcmp(argv[i], "-arg") == 0) {
+            arg = argv[++i];
+        }
     }
     if (hotkey == NULL || program == NULL) {
         std::cout << "!!! Missing required argument -hotkey or -program.\n";
         printHelpMes();
+        return 1;
+    }
+    if (std::string(program).find("log.cmd") == std::string::npos) {
+        std::cout << "!!! Make sure your -program argument contains log.cmd \n";
+        std::cout << "Example: HotkeyListener.exe -hotkey SHIFT+CONTROL+T -program \"C:\\log.cmd\"\n";
         return 1;
     }
 
@@ -204,26 +261,39 @@ int main(int argc, char** argv) {
     if (RegisterHotKey(NULL, 1, keyMod, keyCode))    //0x42 is 'b'
     {
         std::cout << "----- Listener started ------\n";
-        std::cout << "Will call program " << program << ", when hotkey pressed\n";
+        std::cout << "Will trigger the start/stop of " << program << ", when hotkey pressed\n";
     }
     else {
         std::cout << "!!! HotKey registration failed. \n";
         return 0;
     }
 
+    // create log switch cmd file
+    createLogSwitchCMD(program, arg);
+    // run log switch cmd file
+    ShellExecuteA(0, "open", "LogSwitch.cmd", NULL, NULL, 1);
+    
     // loop for listening message
 	MSG msg;
+    bool logCmdStarted = false;
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
+        // key pressed
 		if (msg.message == WM_HOTKEY)
 		{
-			std::cout <<   "!!! HOTKEY PRESSED, Run " << program << ":\n";
-            // run thr program
-            system(program);
+            if (!logCmdStarted) {
+                system("echo > log_start.txt");
+                logCmdStarted = true;
+            }
+            else {
+                system("echo > log_stop.txt");
+                break;
+            }
 		}
 	}
 
-	return 1;
+    std::cout << "----- Capture finished -----\n";
+    return 1;
 }
 
 
