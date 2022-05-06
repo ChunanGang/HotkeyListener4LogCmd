@@ -18,3 +18,6 @@ This extension fixex this issue by creating a new cmd file (logSwitch.cmd) in ru
 After you ran this, a new cmd window will pop up. Do not close it. Now you can run other apps and use CONTROL+P to start log.cmd, and CONTROL+P again to stop.
 
 ETL will be captured in the same directory of HotkeyListener.exe
+
+## Download:
+https://github.com/ChunanGang/HotkeyListener4LogCmd/releases/tag/1.0
