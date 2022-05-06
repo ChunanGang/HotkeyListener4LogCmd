@@ -11,6 +11,8 @@ This extension fixex this issue by creating a new cmd file (logSwitch.cmd) in ru
     HotkeyListener.exe -hotkey HOT_KEY_COMBINATION -program PATH_OF_LOG.CMD -arg log.cmd_aruguments 
     #-arg is optional
  
+ ! Make sure you run this program with command prompt as administrator. This is required for log.cmd
+ 
  Example
     
     HotkeyListener.exe -hotkey CONTROL+P -program "C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\gpuview\log.cmd" -arg "normal light"
